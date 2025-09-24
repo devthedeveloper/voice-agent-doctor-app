@@ -8,6 +8,7 @@ A sophisticated realtime voice agent that acts as a virtual doctor, capable of c
 💊 **Medication Prescription**: AI doctor can prescribe medications with detailed instructions
 🎤 **Voice Interface**: Real-time audio communication using WebRTC
 👨‍⚕️ **AI Avatar**: Realistic doctor avatar with lip-sync using Simli technology
+🖥️ **Bigscreen Avatar Display**: Large, always-visible doctor avatar (800x600px) prominently displayed below the hero section
 📋 **Prescription Display**: Visual prescription panel with medication details
 🔒 **Secure Connection**: Uses OpenAI ephemeral API keys for secure communication
 
@@ -64,6 +65,25 @@ This application now includes an **automatic ephemeral key generation system**:
 1. **API Server**: A local Express.js server (`http://localhost:3001`) that generates OpenAI ephemeral keys
 2. **Frontend**: The voice agent interface that automatically fetches keys from the API server
 3. **Seamless Connection**: No manual key entry required - just click "Connect to Doctor"
+
+## Avatar Display
+
+The application features a **bigscreen avatar display** that provides an immersive doctor consultation experience:
+
+### Key Features:
+- **Always Visible**: The doctor avatar is prominently displayed below the hero section from page load
+- **Large Format**: 800x600px video display optimized for bigscreen viewing
+- **Immediate Initialization**: Simli avatar starts automatically without requiring user interaction
+- **Professional Appearance**: Modern glassmorphism design with medical theming
+- **Responsive Design**: Adapts to different screen sizes while maintaining visual impact
+
+### Simli Integration:
+- **Face ID**: Uses `cace3ef7-a4c4-425d-a8cf-a5358eb0c427` for consistent doctor appearance
+- **Lip Sync**: Real-time lip synchronization with AI voice responses
+- **High Quality**: Smooth video rendering with professional medical avatar
+- **Fallback Support**: Graceful degradation if Simli services are unavailable
+
+The avatar creates a more engaging and trustworthy consultation experience by providing visual feedback and maintaining the feeling of interacting with a real doctor.
 
 ## Environment Variables
 
@@ -141,11 +161,12 @@ app.post('/api/realtime-token', async (req, res) => {
 ## How to Use
 
 1. **Start the Application**: Open the application in your browser
-2. **Grant Microphone Access**: Allow microphone permissions when prompted
-3. **Get API Key**: Generate an ephemeral API key using the methods above
-4. **Connect**: Click "Connect to Doctor" and enter your ephemeral API key
-5. **Start Consultation**: Begin speaking about your medical concerns
-6. **Receive Prescriptions**: The AI doctor will provide prescriptions that appear in the prescription panel
+2. **View Doctor Avatar**: The large doctor avatar will be immediately visible below the hero section
+3. **Grant Microphone Access**: Allow microphone permissions when prompted
+4. **Connect**: Click "Connect to Doctor" - the avatar will initialize automatically
+5. **Start Consultation**: Begin speaking about your medical concerns while watching the avatar
+6. **Interactive Experience**: The avatar provides lip-sync feedback during AI responses
+7. **Receive Prescriptions**: The AI doctor will provide prescriptions that appear in the prescription panel
 
 ## Medical Capabilities
 
