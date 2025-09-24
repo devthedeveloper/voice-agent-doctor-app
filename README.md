@@ -7,6 +7,7 @@ A sophisticated realtime voice agent that acts as a virtual doctor, capable of c
 🩺 **Medical Consultation**: Interactive voice-based medical consultations
 💊 **Medication Prescription**: AI doctor can prescribe medications with detailed instructions
 🎤 **Voice Interface**: Real-time audio communication using WebRTC
+👨‍⚕️ **AI Avatar**: Realistic doctor avatar with lip-sync using Simli technology
 📋 **Prescription Display**: Visual prescription panel with medication details
 🔒 **Secure Connection**: Uses OpenAI ephemeral API keys for secure communication
 
@@ -24,14 +25,21 @@ A sophisticated realtime voice agent that acts as a virtual doctor, capable of c
    npm install
    ```
 
-3. Configure your OpenAI API key:
+3. Configure your API keys:
    ```bash
    # Copy the environment template
    cp .env.example .env
    
-   # Edit .env and add your OpenAI API key
-   # Replace 'your-openai-api-key-here' with your actual key
+   # Edit .env and add your API keys
+   # Replace 'your-openai-api-key-here' with your actual OpenAI key
+   # Replace 'your-simli-api-key' with your actual Simli key (optional)
    ```
+
+   **Simli Avatar Setup (Optional):**
+   - Sign up at [Simli.ai](https://simli.ai) to get an API key
+   - Add your Simli API key to the `.env` file as `VITE_SIMLI_API_KEY`
+- Optionally customize the face ID by setting `VITE_SIMLI_FACE_ID`
+   - If no Simli key is provided, the app will use a static avatar placeholder
 
 4. Start both the API server and frontend (recommended):
    ```bash

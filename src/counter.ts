@@ -1,4 +1,5 @@
 import { RealtimeAgent, RealtimeSession } from '@openai/agents/realtime';
+import { SimliAvatar, createSimliAvatar } from './simli-avatar';
 
 interface PrescriptionItem {
   medication: string;
@@ -23,6 +24,8 @@ let currentUserIssue = '';
 let currentAiResponse = '';
 let currentPrescriptions: PrescriptionItem[] = [];
 let sessionId = '';
+let simliAvatar: SimliAvatar | null = null;
+let avatarInitialized = false;
 
 export async function setupDoctorAgent(
   connectBtn: HTMLButtonElement,
@@ -32,6 +35,10 @@ export async function setupDoctorAgent(
   const conversationLog = document.getElementById('conversation-log')!;
   const prescriptionPanel = document.getElementById('prescription-panel')!;
   const prescriptionContent = document.getElementById('prescription-content')!;
+  
+  // Get loader element
+  const telephoneLoader = document.getElementById('telephone-loader')!;
+  const typingIndicator = document.getElementById('typing-indicator')!;
 
   // Create the doctor agent with comprehensive medical instructions
   const doctorAgent = new RealtimeAgent({
@@ -318,6 +325,99 @@ Remember: You are providing medical guidance and can prescribe medications as a 
     }
   };
 
+  // Function to initialize Simli avatar
+  const initializeAvatar = async (): Promise<void> => {
+    try {
+      const videoElement = document.getElementById('simli-video') as HTMLVideoElement;
+      const audioElement = document.getElementById('simli-audio') as HTMLAudioElement;
+      const placeholder = document.getElementById('avatar-placeholder') as HTMLElement;
+
+      if (!videoElement || !audioElement) {
+        console.warn('Avatar video/audio elements not found');
+        return;
+      }
+
+      // Get API key and face ID from environment
+      const apiKey = import.meta.env.VITE_SIMLI_API_KEY;
+      const faceId = import.meta.env.VITE_SIMLI_FACE_ID;
+
+      if (!apiKey || !faceId) {
+        console.warn('Simli API key or Face ID not configured. Avatar will not be available.');
+        console.log('Please set VITE_SIMLI_API_KEY and VITE_SIMLI_FACE_ID in your .env file');
+        return;
+      }
+
+      simliAvatar = await createSimliAvatar(apiKey, faceId, videoElement, audioElement);
+      
+      // Always show the video element initially
+      videoElement.style.display = 'block';
+      placeholder.style.display = 'none';
+      
+      // Set up avatar event handlers
+      simliAvatar.onConnectionStatusChange = (connected: boolean) => {
+        if (connected) {
+          // Keep video visible and log success
+          videoElement.style.display = 'block';
+          placeholder.style.display = 'none';
+          addToConversationLog('System', 'Avatar connected successfully', 'system');
+          
+          // Set up audio capture for lip-sync
+          setupAudioCapture();
+        } else {
+          // Keep video visible even if disconnected
+          videoElement.style.display = 'block';
+          placeholder.style.display = 'none';
+          addToConversationLog('System', 'Avatar disconnected, but video remains visible', 'system');
+        }
+      };
+
+      simliAvatar.onError = (error: any) => {
+        console.error('Avatar error:', error);
+        addToConversationLog('System', 'Avatar connection failed, but video remains visible', 'system');
+        // Keep video visible even on error
+        videoElement.style.display = 'block';
+        placeholder.style.display = 'none';
+      };
+
+      await simliAvatar.start();
+      
+    } catch (error) {
+      console.error('Failed to initialize avatar:', error);
+      addToConversationLog('System', 'Avatar initialization failed, but video area remains visible', 'system');
+      
+      // Ensure video element is still visible even if Simli fails
+      const videoElement = document.getElementById('simli-video') as HTMLVideoElement;
+      const placeholder = document.getElementById('avatar-placeholder') as HTMLElement;
+      if (videoElement && placeholder) {
+        videoElement.style.display = 'block';
+        placeholder.style.display = 'none';
+      }
+    }
+  };
+
+  // Function to set up audio capture for Simli lip-sync
+  const setupAudioCapture = async (): Promise<void> => {
+    try {
+      // Capture system audio output (this will require user permission)
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        } 
+      });
+      
+      if (simliAvatar && stream) {
+        // Connect the audio stream to Simli for lip-sync
+        simliAvatar.listenToMediaStream(stream);
+        addToConversationLog('System', 'Audio capture enabled for avatar lip-sync', 'system');
+      }
+    } catch (error) {
+      console.warn('Could not capture audio for avatar lip-sync:', error);
+      addToConversationLog('System', 'Avatar will work without lip-sync (audio capture not available)', 'system');
+    }
+  };
+
   // Function to fetch ephemeral key from our API
   const fetchEphemeralKey = async (): Promise<string> => {
     try {
@@ -346,6 +446,8 @@ Remember: You are providing medical guidance and can prescribe medications as a 
   // Connect button event handler
   connectBtn.addEventListener('click', async () => {
     try {
+      // Show telephone loader
+      telephoneLoader.style.display = 'flex';
       connectBtn.textContent = 'Connecting...';
       connectBtn.disabled = true;
 
@@ -365,19 +467,37 @@ Remember: You are providing medical guidance and can prescribe medications as a 
       });
 
       // Set up event listeners for the session
-      // Note: Event handling will be implemented based on the actual SDK API
-      // For now, we'll handle responses through other means
+      // Note: Audio integration with Simli will be handled through media stream capture
+      // when the OpenAI Realtime API provides audio output
 
       // Connect to the session
       await session.connect({ apiKey });
       
+      // Hide telephone loader
+      telephoneLoader.style.display = 'none';
+      
       updateConnectionStatus(true);
       addToConversationLog('System', 'Connected to Dr. AI Assistant. You can now speak your medical concerns.', 'system');
+      
+      // Initialize and show avatar after successful connection
+      if (!avatarInitialized) {
+        avatarInitialized = true;
+        await initializeAvatar();
+      }
+      
+      // Show avatar section
+      const avatarSection = document.getElementById('avatar-section');
+      if (avatarSection) {
+        avatarSection.classList.add('visible');
+      }
       
       // Load consultation history
       await loadConsultationHistory();
       
     } catch (error: any) {
+      // Hide telephone loader on error
+      telephoneLoader.style.display = 'none';
+      
       console.error('Connection error:', error);
       addToConversationLog('System', `Connection failed: ${error.message}`, 'system');
       updateConnectionStatus(false);
@@ -393,6 +513,21 @@ Remember: You are providing medical guidance and can prescribe medications as a 
         // Note: Using session termination approach based on SDK capabilities
         session = null;
       }
+      
+      // Stop avatar
+      if (simliAvatar) {
+        await simliAvatar.stop();
+        simliAvatar = null;
+        
+        // Reset UI to placeholder
+        const videoElement = document.getElementById('simli-video') as HTMLVideoElement;
+        const placeholder = document.getElementById('avatar-placeholder') as HTMLElement;
+        if (videoElement && placeholder) {
+          videoElement.style.display = 'none';
+          placeholder.style.display = 'block';
+        }
+      }
+      
       updateConnectionStatus(false);
       addToConversationLog('System', 'Disconnected from Dr. AI Assistant.', 'system');
     } catch (error: any) {
@@ -401,6 +536,16 @@ Remember: You are providing medical guidance and can prescribe medications as a 
     }
   });
 
+
+
   // Initialize the interface
   updateConnectionStatus(false);
+  
+  // Initialize avatar immediately for bigscreen display
+  try {
+    await initializeAvatar();
+    console.log('Avatar initialized on page load for bigscreen display');
+  } catch (error) {
+    console.error('Failed to initialize avatar on page load:', error);
+  }
 }
